@@ -4,9 +4,11 @@ import se.bjurr.violations.lib.reports.Parser
 import se.bjurr.violations.violationslib.com.google.gson.JsonArray
 import se.bjurr.violations.violationslib.com.google.gson.JsonObject
 import java.math.BigInteger
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
+import java.util.stream.Stream
 import kotlin.system.exitProcess
 
 //DEPS se.bjurr.violations:violations-lib:1.96
@@ -23,16 +25,24 @@ val violations: List<Violation> = violationsApi()
         .findAll(Parser.CHECKSTYLE)
         .violations()
 
-val pwd: Path = Paths.get("").toAbsolutePath()
+val cwd: Path = Paths.get("").toAbsolutePath()
 
 val result = JsonArray()
 
 violations.forEach { violation ->
-    val relativePath = pwd.relativize(Paths.get(violation.file))
+    val path = Paths.get(violation.file)
+    var lines: Stream<String>? = null
+    val contents = try {
+        lines = Files.lines(path)
+        lines.skip((violation.startLine - 1).toLong()).findFirst().orElse("")
+    } catch (e: Throwable) {
+        ""
+    } finally {
+        lines?.close()
+    }
     val digest = MessageDigest.getInstance("MD5").apply {
         update(violation.file.toByteArray())
-        update(violation.startLine.toByte())
-        update(violation.endLine.toByte())
+        update(contents.toByteArray())
         update(violation.message.toByteArray())
         update(violation.category.toByteArray())
         update(violation.group.toByteArray())
@@ -43,7 +53,7 @@ violations.forEach { violation ->
         addProperty("description", violation.message)
         addProperty("fingerprint", BigInteger(1, digest).toString(16).padStart(32, '0'))
         add("location", JsonObject().apply {
-            addProperty("path", relativePath.toString())
+            addProperty("path", cwd.relativize(path).toString())
             add("lines", JsonObject().apply {
                 addProperty("begin", violation.startLine)
             })
