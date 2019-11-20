@@ -13,23 +13,35 @@ import kotlin.system.exitProcess
 
 //DEPS se.bjurr.violations:violations-lib:1.96
 
-val pattern = args.getOrNull(0)
-if (pattern == null) {
-    println("You must specify a regex pattern to find checkstyle xml files.")
+fun printUsage() {
+    println("Usage: cs2cc <checkstyle xml regex> <android lint xml regex>")
+    println("\tExample: cs2cc '.*detekt\\.xml$' '.*lint-results\\.xml$'")
     exitProcess(1)
 }
 
-val violations: List<Violation> = violationsApi()
-        .withPattern(pattern)
+val checkstylePattern = args.getOrNull(0)
+if (checkstylePattern == null) printUsage()
+
+val androidLintPattern = args.getOrNull(1)
+if (androidLintPattern == null) printUsage()
+
+val checkstyleViolations: List<Violation> = violationsApi()
+        .withPattern(checkstylePattern)
         .inFolder(".")
         .findAll(Parser.CHECKSTYLE)
         .violations()
+
+val androidLintViolations: List<Violation> = violationsApi()
+    .withPattern(androidLintPattern)
+    .inFolder(".")
+    .findAll(Parser.ANDROIDLINT)
+    .violations()
 
 val cwd: Path = Paths.get("").toAbsolutePath()
 
 val result = JsonArray()
 
-violations.forEach { violation ->
+(checkstyleViolations + androidLintViolations).forEach { violation ->
     val path = Paths.get(violation.file)
     var lines: Stream<String>? = null
     val contents = try {
