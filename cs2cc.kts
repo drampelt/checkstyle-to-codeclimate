@@ -1,3 +1,6 @@
+#!/usr/bin/env kscript
+@file:DependsOn("se.bjurr.violations:violations-lib:1.155.3")
+
 import se.bjurr.violations.lib.ViolationsApi.violationsApi
 import se.bjurr.violations.lib.model.Violation
 import se.bjurr.violations.lib.reports.Parser
@@ -10,8 +13,6 @@ import java.nio.file.Paths
 import java.security.MessageDigest
 import java.util.stream.Stream
 import kotlin.system.exitProcess
-
-//DEPS se.bjurr.violations:violations-lib:1.96
 
 fun printUsage() {
     println("Usage: cs2cc <checkstyle xml regex> <android lint xml regex>")
@@ -30,12 +31,14 @@ val checkstyleViolations: List<Violation> = violationsApi()
         .inFolder(".")
         .findAll(Parser.CHECKSTYLE)
         .violations()
+        .toList()
 
 val androidLintViolations: List<Violation> = violationsApi()
     .withPattern(androidLintPattern)
     .inFolder(".")
     .findAll(Parser.ANDROIDLINT)
     .violations()
+    .toList()
 
 val cwd: Path = Paths.get("").toAbsolutePath()
 
